@@ -8,30 +8,29 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 
 
-def main(fields):
-    SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
+def initialize_drive_api(SCOPES):
     creds = Credentials.from_service_account_file('credentials.json', scopes=SCOPES)
     service = build('drive', 'v3', credentials=creds)
+    return service
 
-    # File ID of the Google Drive file
-    file_id = '1zLdEcpzCp357s3Rse112Lch9EMUWzMLE'
 
-    # Fetch and download the file
+def download_file(service, file_id):
     request = service.files().get_media(fileId=file_id)
     downloaded = io.BytesIO()
     downloader = MediaIoBaseDownload(downloaded, request)
-
     done = False
-    while done is False:
+    while not done:
         status, done = downloader.next_chunk()
         print("Download %d%%." % int(status.progress() * 100))
+    return downloaded
 
-    # Read CSV and filter the fields
+
+def parse_csv(downloaded, fields=None):
     downloaded.seek(0)
     csvreader = csv.DictReader(io.StringIO(downloaded.read().decode('utf-8')))
     headers = csvreader.fieldnames
 
-    if fields:  # Check if specific fields are requested
+    if fields:
         for field in fields:
             if field not in headers:
                 raise Exception(f"Field '{field}' not found in CSV headers.")
@@ -43,9 +42,26 @@ def main(fields):
         else:
             json_output["data"].append(row)
 
+    return json_output
+
+
+def write_json_to_file(json_data, filename):
+    with open(filename, 'w') as outfile:
+        json.dump(json_data, outfile, indent=4)
+
+
+def main(fields):
+    SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
+    service = initialize_drive_api(SCOPES)
+
+    # File ID of the Google Drive file
+    file_id = '1zLdEcpzCp357s3Rse112Lch9EMUWzMLE'
+
+    downloaded = download_file(service, file_id)
+    json_output = parse_csv(downloaded, fields)
+
     # Write JSON to file
-    with open('output.json', 'w') as outfile:
-        json.dump(json_output, outfile, indent=4)
+    write_json_to_file(json_output, 'output.json')
 
     print("Done.")
 

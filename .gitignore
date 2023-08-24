@@ -186,3 +186,6 @@ fabric.properties
 
 # Google API credentials
 credentials.json
+
+# Output file
+output.json
