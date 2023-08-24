@@ -43,7 +43,11 @@ def main(fields):
         else:
             json_output["data"].append(row)
 
-    print(json.dumps(json_output, indent=4))
+    # Write JSON to file
+    with open('output.json', 'w') as outfile:
+        json.dump(json_output, outfile, indent=4)
+
+    print("Done.")
 
 
 if __name__ == '__main__':
